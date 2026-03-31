@@ -1,11 +1,123 @@
 "use client";
-import { useState } from "react";
-import { AGENT_PASSES } from "@/lib/data";
+
+import { useEffect, useMemo, useState } from "react";
 import { useAdminApp } from "@/context/AdminAppContext";
 
+type PassApiItem = {
+  userId: string;
+  agentName: string;
+  reraNo: string | null;
+  packBoughtDate: string | null;
+  packExpiresIn: string | null;
+  listingsCreatedThroughCurrentPass: number;
+  revenueGeneratedThroughCurrentPass: number;
+  active: boolean;
+};
+
+type PassesApiResponse = {
+  summary: {
+    agentPassesSoldThisMonth: number;
+    amountGeneratedByAgentPassesThisMonth: number;
+    listingsCreatedByUsingAgentPassesThisMonth: number;
+  };
+  items: PassApiItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+};
+
+function formatShortDate(iso: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+}
+
+function daysLeft(iso: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso).getTime();
+  if (Number.isNaN(d)) return null;
+  return Math.ceil((d - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
 export default function AdminPasses() {
-  const { showToast } = useAdminApp();
-  const [passes, setPasses] = useState(AGENT_PASSES);
+  const { showToast, dashboardData } = useAdminApp();
+  const { activeAgentPasses, expiringAgentPassesIn7Days } = dashboardData;
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<PassesApiResponse["summary"]>({
+    agentPassesSoldThisMonth: 0,
+    amountGeneratedByAgentPassesThisMonth: 0,
+    listingsCreatedByUsingAgentPassesThisMonth: 0,
+  });
+  const [pagination, setPagination] = useState<PassesApiResponse["pagination"]>({
+    page: 1,
+    pageSize: 8,
+    total: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+  const [passes, setPasses] = useState<
+    Array<{
+      id: string;
+      name: string;
+      rera: string;
+      bought: string;
+      expires: string;
+      daysLeft: number | null;
+      used: number;
+      max: number;
+      revenue: number;
+      status: "Active" | "Expiring" | "Expired";
+    }>
+  >([]);
+
+  useEffect(() => {
+    (async function loadPasses() {
+      try {
+        setLoading(true);
+        const response = await fetch(`http://localhost:3000/api/admin/passes?page=${page}`, {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("failed_to_load_passes");
+        const data = (await response.json()) as PassesApiResponse;
+        setSummary(data.summary);
+        setPagination(data.pagination);
+        setPasses(
+          (data.items ?? []).map((item) => {
+            const left = daysLeft(item.packExpiresIn);
+            const status: "Active" | "Expiring" | "Expired" = !item.active
+              ? "Expired"
+              : left !== null && left <= 7
+                ? "Expiring"
+                : "Active";
+            return {
+              id: item.userId,
+              name: item.agentName || "—",
+              rera: item.reraNo || "—",
+              bought: formatShortDate(item.packBoughtDate),
+              expires: formatShortDate(item.packExpiresIn),
+              daysLeft: left,
+              used: item.listingsCreatedThroughCurrentPass,
+              max: 10,
+              revenue: item.revenueGeneratedThroughCurrentPass,
+              status,
+            };
+          })
+        );
+      } catch {
+        showToast("Could not load agent pass data", "error");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [page, showToast]);
 
   const sendReminder = (name: string) =>
     showToast(`Renewal reminder sent to ${name}`, "info");
@@ -13,16 +125,18 @@ export default function AdminPasses() {
     showToast("Renewal reminders sent to all expiring agents", "success");
   };
 
-  const totalRevenue = passes.reduce((s, p) => s + p.revenue, 0);
-  const active = passes.filter((p) => p.status === "Active").length;
-  const expiring = passes.filter((p) => p.status === "Expiring").length;
-  const totalListings = passes.reduce((s, p) => s + p.used, 0);
-
   const STATUS_STYLE: Record<string, { badge: string; color: string }> = {
     Active: { badge: "badge-live", color: "#008A05" },
     Expiring: { badge: "badge-pending", color: "#B07D2A" },
     Expired: { badge: "badge-rejected", color: "#FF5A5F" },
   };
+  const soldThisMonth = summary.agentPassesSoldThisMonth;
+  const revenueThisMonth = summary.amountGeneratedByAgentPassesThisMonth;
+  const listingsThisMonth = summary.listingsCreatedByUsingAgentPassesThisMonth;
+  const expiringCountOnPage = useMemo(
+    () => passes.filter((p) => p.status === "Expiring").length,
+    [passes]
+  );
 
   return (
     <div className="p-8 animate-fade-up">
@@ -32,7 +146,7 @@ export default function AdminPasses() {
             Agent passes
           </h1>
           <div className="text-[14px] text-[#717171] mt-0.5">
-            ₹{totalRevenue.toLocaleString("en-IN")} collected this month
+            ₹{revenueThisMonth.toLocaleString("en-IN")} collected this month
           </div>
         </div>
         <button className="btn btn-outline btn-sm">Export CSV</button>
@@ -43,26 +157,26 @@ export default function AdminPasses() {
         {[
           {
             label: "Active passes",
-            value: active,
+            value: activeAgentPasses,
             sub: "Currently live",
             color: "#008A05",
           },
           {
             label: "Expiring this week",
-            value: expiring,
+            value: expiringAgentPassesIn7Days,
             sub: "Need renewal",
             color: "#B07D2A",
           },
           {
             label: "Revenue this month",
-            value: `₹${totalRevenue.toLocaleString("en-IN")}`,
-            sub: `${passes.length} passes sold`,
+            value: `₹${revenueThisMonth.toLocaleString("en-IN")}`,
+            sub: `${soldThisMonth} passes sold`,
             color: "#222",
           },
           {
             label: "Listings under passes",
-            value: totalListings,
-            sub: "Currently live",
+            value: listingsThisMonth,
+            sub: "Created this month",
             color: "#0066CC",
           },
         ].map((card) => (
@@ -84,13 +198,13 @@ export default function AdminPasses() {
         ))}
       </div>
 
-      {expiring > 0 && (
+      {expiringAgentPassesIn7Days > 0 && (
         <div
           className="rounded-xl p-4 flex items-center justify-between mb-5"
           style={{ background: "#FDF5E6", border: "1px solid rgba(176,125,42,0.2)" }}
         >
           <div className="text-[13px] font-medium" style={{ color: "#B07D2A" }}>
-            ⚠️ {expiring} pass{expiring !== 1 ? "es" : ""} expiring within 7 days
+            ⚠️ {expiringAgentPassesIn7Days} pass{expiringAgentPassesIn7Days !== 1 ? "es" : ""} expiring within 7 days
           </div>
           <button
             onClick={sendAll}
@@ -99,6 +213,16 @@ export default function AdminPasses() {
           >
             Send all renewal reminders →
           </button>
+        </div>
+      )}
+      {expiringAgentPassesIn7Days === 0 && expiringCountOnPage > 0 && (
+        <div
+          className="rounded-xl p-4 flex items-center justify-between mb-5"
+          style={{ background: "#FDF5E6", border: "1px solid rgba(176,125,42,0.2)" }}
+        >
+          <div className="text-[13px] font-medium" style={{ color: "#B07D2A" }}>
+            ⚠️ {expiringCountOnPage} pass{expiringCountOnPage !== 1 ? "es" : ""} in this page are expiring soon
+          </div>
         </div>
       )}
 
@@ -123,7 +247,7 @@ export default function AdminPasses() {
 
         {passes.map((p) => (
           <div
-            key={p.name}
+            key={p.id}
             className="grid items-center px-5 border-b border-[#E8E8E8] last:border-0 hover:bg-[#FAFAFA] transition-colors"
             style={{
               gridTemplateColumns: "1fr 200px 90px 90px 1fr 90px 80px 140px",
@@ -140,13 +264,13 @@ export default function AdminPasses() {
                 color:
                   p.status === "Expired"
                     ? "#FF5A5F"
-                    : p.daysLeft <= 14
+                    : p.daysLeft !== null && p.daysLeft <= 14
                       ? "#B07D2A"
                       : "#717171",
               }}
             >
               {p.expires}
-              {p.status !== "Expired" && p.daysLeft <= 14 && (
+              {p.status !== "Expired" && p.daysLeft !== null && p.daysLeft <= 14 && (
                 <div className="text-[10px]">{p.daysLeft}d left</div>
               )}
             </div>
@@ -192,6 +316,32 @@ export default function AdminPasses() {
             </div>
           </div>
         ))}
+      </div>
+      <div className="flex items-center justify-between mt-4 text-[13px] text-[#717171]">
+        <span>
+          {loading
+            ? "Loading passes..."
+            : `Showing ${passes.length} of ${pagination.total}`}
+        </span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            disabled={!pagination.hasPrevPage || loading}
+            className="btn btn-outline btn-sm disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <span className="px-2 py-1 text-[12px] text-[#717171]">
+            Page {pagination.page} / {Math.max(1, pagination.totalPages)}
+          </span>
+          <button
+            onClick={() => setPage((prev) => prev + 1)}
+            disabled={!pagination.hasNextPage || loading}
+            className="btn btn-outline btn-sm disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

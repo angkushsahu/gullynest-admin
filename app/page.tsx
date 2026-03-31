@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useAdminApp } from "@/context/AdminAppContext";
-import { SEARCHER_USERS, AGENT_PASSES } from "@/lib/data";
 
 const DAY = [
   "Sunday",
@@ -31,54 +31,80 @@ function todayLabel() {
   return `${DAY[d.getDay()]}, ${MONTH[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
-const ACTIVITY = [
-  {
-    dot: "#B07D2A",
-    text: "New listing submitted — 2 BHK Koramangala by Riya K.",
-    time: "2 hrs ago",
-  },
-  { dot: "#008A05", text: "Pack purchased — Arjun M. · ₹499", time: "3 hrs ago" },
-  {
-    dot: "#008A05",
-    text: "Listing approved and live — HSR Layout 1 BHK",
-    time: "4 hrs ago",
-  },
-  {
-    dot: "#0066CC",
-    text: "Agent pass purchased — Ramesh Properties · ₹1,999",
-    time: "5 hrs ago",
-  },
-  {
-    dot: "#B07D2A",
-    text: "New listing submitted — Room Indiranagar by Priya D.",
-    time: "6 hrs ago",
-  },
-  {
-    dot: "#FF5A5F",
-    text: "Listing rejected — duplicate detected · Whitefield",
-    time: "8 hrs ago",
-  },
-  {
-    dot: "#008A05",
-    text: "Verified badge awarded — 3 BHK Bellandur",
-    time: "10 hrs ago",
-  },
-  { dot: "#008A05", text: "Pack purchased — Meena R. · ₹499", time: "12 hrs ago" },
-];
+type RecentActivity = {
+  id: string;
+  type:
+    | "listing_submitted"
+    | "listing_live"
+    | "listing_rejected"
+    | "listing_verified"
+    | "pack_purchased"
+    | "agent_pass_purchased";
+  text: string;
+  at: string;
+};
+
+function relativeTime(iso: string) {
+  const at = new Date(iso).getTime();
+  if (Number.isNaN(at)) return "just now";
+  const diffMs = Date.now() - at;
+  if (diffMs <= 0) return "just now";
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hr${hours > 1 ? "s" : ""} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days > 1 ? "s" : ""} ago`;
+}
+
+function activityDot(type: RecentActivity["type"]) {
+  if (type === "listing_rejected") return "#FF5A5F";
+  if (type === "agent_pass_purchased") return "#0066CC";
+  if (type === "listing_submitted") return "#B07D2A";
+  return "#008A05";
+}
 
 export default function AdminDashboard() {
-  const { sidebarData } = useAdminApp();
-  const { pendingListings, liveListings, totalListings } = sidebarData;
+  const { dashboardData } = useAdminApp();
+  const [activities, setActivities] = useState<RecentActivity[]>([]);
+  const {
+    activeAgentPasses,
+    expiringAgentPassesIn7Days,
+    last7DaysRevenue,
+    liveListings,
+    pendingListings,
+    totalCapturedPaymentAmount,
+    totalListings,
+    totalPaymentRecords,
+  } = dashboardData;
 
-  const activeAgentPasses = AGENT_PASSES.filter((p) => p.status === "Active").length;
-  const expiringAgentPasses = AGENT_PASSES.filter(
-    (p) => p.status === "Expiring" || p.daysLeft <= 7
-  ).length;
-  const totalPacksBought = SEARCHER_USERS.reduce((sum, u) => sum + u.packs, 0);
-  const totalPackRevenue = totalPacksBought * 499;
-  const totalAgentRevenue = AGENT_PASSES.length * 1999;
-  const totalRevenue = totalPackRevenue + totalAgentRevenue;
-  // Users active today
+  const revenueSeries = (last7DaysRevenue ?? []).slice(-7);
+  const chartMax = Math.max(
+    ...revenueSeries.map((entry) => entry.totalAmount),
+    1
+  );
+  const totalRevenue = revenueSeries.reduce((sum, entry) => sum + entry.totalAmount, 0);
+  const totalPaymentRevenue = revenueSeries.reduce(
+    (sum, entry) => sum + entry.paymentsAmount,
+    0
+  );
+  const totalPassRevenue = revenueSeries.reduce((sum, entry) => sum + entry.passesAmount, 0);
+
+  useEffect(() => {
+    (async function loadActivity() {
+      try {
+        const response = await fetch("http://localhost:3000/api/admin/activity", {
+          credentials: "include",
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as { items?: RecentActivity[] };
+        setActivities(Array.isArray(data.items) ? data.items.slice(0, 8) : []);
+      } catch {
+        // Keep empty activity state on network failures.
+      }
+    })();
+  }, []);
 
   return (
     <div className="p-8 animate-fade-up">
@@ -114,8 +140,8 @@ export default function AdminDashboard() {
           },
           {
             label: "Total pack purchases",
-            value: String(totalPacksBought),
-            sub: `₹${totalPackRevenue.toLocaleString("en-IN")} earned`,
+            value: String(totalPaymentRecords),
+            sub: `₹${totalCapturedPaymentAmount.toLocaleString("en-IN")} earned`,
             subColor: "#717171",
             href: "/users",
             btn: "View users →",
@@ -125,10 +151,10 @@ export default function AdminDashboard() {
             label: "Active agent passes",
             value: String(activeAgentPasses),
             sub:
-              expiringAgentPasses > 0
-                ? `${expiringAgentPasses} expiring soon`
+            expiringAgentPassesIn7Days > 0
+                ? `${expiringAgentPassesIn7Days} expiring soon`
                 : "All passes healthy",
-            subColor: expiringAgentPasses > 0 ? "#B07D2A" : "#008A05",
+            subColor: expiringAgentPassesIn7Days > 0 ? "#B07D2A" : "#008A05",
             href: "/passes",
             btn: "View passes →",
             btnColor: "#222",
@@ -166,20 +192,23 @@ export default function AdminDashboard() {
         <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6">
           <div className="text-[15px] font-semibold mb-5">Recent activity</div>
           <div className="flex flex-col divide-y divide-[#F7F7F7]">
-            {ACTIVITY.map((item, i) => (
+            {activities.length === 0 && (
+              <div className="text-[13px] text-[#717171] py-3">No recent activity yet.</div>
+            )}
+            {activities.map((item) => (
               <div
-                key={i}
+                key={item.id}
                 className="flex items-start gap-3 py-3.5 hover:bg-[#FAFAFA] -mx-2 px-2 rounded transition-colors"
               >
                 <div
                   className="w-2 h-2 rounded-full shrink-0 mt-1.5 animate-pulse-dot"
-                  style={{ background: item.dot }}
+                  style={{ background: activityDot(item.type) }}
                 />
                 <div className="text-[13px] text-[#222] flex-1 leading-snug">
                   {item.text}
                 </div>
-                <div className="text-[11px] text-[#B0B0B0] flex-shrink-0 mt-0.5 whitespace-nowrap">
-                  {item.time}
+                <div className="text-[11px] text-[#B0B0B0] shrink-0 mt-0.5 whitespace-nowrap">
+                  {relativeTime(item.at)}
                 </div>
               </div>
             ))}
@@ -209,7 +238,7 @@ export default function AdminDashboard() {
                 className="btn btn-sm w-full justify-center no-underline border"
                 style={{ borderColor: "#B07D2A", color: "#B07D2A", background: "white" }}
               >
-                Agent passes (2 expiring)
+                Agent passes {expiringAgentPassesIn7Days > 0 ? `(${expiringAgentPassesIn7Days} expiring)` : null}
               </Link>
               <Link
                 href="/users"
@@ -223,20 +252,27 @@ export default function AdminDashboard() {
           {/* Mini revenue chart */}
           <div className="bg-white border border-[#E8E8E8] rounded-2xl p-5">
             <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#B0B0B0] mb-4">
-              Total platform revenue
+              Last 7 days revenue
             </div>
             <div className="flex items-end gap-1.5 h-14 mb-3">
-              {[40, 65, 30, 80, 55, 90, 70].map((h, i) => (
+              {revenueSeries.map((entry, i) => (
                 <div
-                  key={i}
+                  key={entry.date}
                   className="flex-1 rounded-sm transition-all duration-500"
-                  style={{ height: `${h}%`, background: i === 6 ? "#FF5A5F" : "#E8E8E8" }}
+                  style={{
+                    height: `${Math.max((entry.totalAmount / chartMax) * 100, 6)}%`,
+                    background: i === revenueSeries.length - 1 ? "#FF5A5F" : "#E8E8E8",
+                  }}
                 />
               ))}
             </div>
             <div className="flex justify-between text-[10px] text-[#B0B0B0] mb-3">
-              {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-                <span key={i}>{d}</span>
+              {revenueSeries.map((entry) => (
+                <span key={entry.date}>
+                  {new Date(entry.date).toLocaleDateString("en-IN", {
+                    weekday: "short",
+                  })[0]}
+                </span>
               ))}
             </div>
             <div className="text-[18px] font-bold">
@@ -247,10 +283,10 @@ export default function AdminDashboard() {
             </div>
             <div className="flex gap-3 mt-2 text-[11px]">
               <span style={{ color: "#008A05" }}>
-                Packs: ₹{totalPackRevenue.toLocaleString("en-IN")}
+                Payments: ₹{totalPaymentRevenue.toLocaleString("en-IN")}
               </span>
               <span style={{ color: "#0066CC" }}>
-                Agents: ₹{totalAgentRevenue.toLocaleString("en-IN")}
+                Agents: ₹{totalPassRevenue.toLocaleString("en-IN")}
               </span>
             </div>
           </div>

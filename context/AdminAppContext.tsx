@@ -8,44 +8,7 @@ import React, {
   useEffect,
 } from "react";
 
-interface AdminSidebarResponse {
-  pendingListings: number;
-  liveListings: number;
-  rejectedListings: number;
-  totalListings: number;
-  agents: number;
-  searchers: number;
-  listers: number;
-  totalUsers: number;
-}
-
-interface User {
-  id: string;
-  supabaseId: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  role: string | null;
-  avatarUrl: string | null;
-  isAdmin: boolean;
-  packCount: number;
-  packExpiry: string | null;
-}
-
-type UserStatus = "authenticated" | "unauthenticated" | "loading";
-
-export interface ToastState {
-  id: number;
-  message: string;
-  type: "success" | "error" | "info";
-}
-
-interface AppContextType {
-  sidebarData: AdminSidebarResponse;
-  showToast: (message: string, type: ToastState["type"]) => void;
-  user: User | null;
-  userStatus: UserStatus;
-}
+import { AppContextType, ToastState, User, UserStatus, AdminDashboardResponse, initialDashboardData } from "./types";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -85,23 +48,14 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Sidebar state
-  const [sidebarData, setSidebarData] = useState<AdminSidebarResponse>({
-    pendingListings: 0,
-    liveListings: 0,
-    rejectedListings: 0,
-    totalListings: 0,
-    agents: 0,
-    searchers: 0,
-    listers: 0,
-    totalUsers: 0,
-  });
+  const [dashboardData, setDashboardData] = useState<AdminDashboardResponse>(initialDashboardData);
 
   useEffect(() => {
     (async function () {
       try {
         const response = await fetch("http://localhost:3000/api/admin/dashboard", { credentials: "include" });
-        const data = await response.json() as AdminSidebarResponse;
-        setSidebarData(data);
+        const data = await response.json() as AdminDashboardResponse;
+        setDashboardData(data);
       } catch (error) {
         console.error("Error fetching user", error);
       }
@@ -109,7 +63,7 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ showToast, sidebarData, user, userStatus }}>
+    <AppContext.Provider value={{ showToast, dashboardData, user, userStatus }}>
       {children}
     </AppContext.Provider>
   );

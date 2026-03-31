@@ -43,8 +43,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function LayoutComponent({ children }: { children: React.ReactNode }) {
-  const { sidebarData, user, userStatus } = useAdminApp();
-  const { pendingListings, liveListings, totalListings, totalUsers } = sidebarData;
+  const { dashboardData: sidebarData, user, userStatus } = useAdminApp();
+  const { liveListings, pendingListings, registeredAgents, totalListings, totalUsers } = sidebarData;
 
   const pathname = usePathname();
   const router = useRouter();
@@ -74,8 +74,6 @@ function LayoutComponent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
-
-  const activeAgentCount = AGENT_PASSES.filter((p) => p.status === "Active").length;
 
   const getBadgeCount = (badge?: string) => {
     if (badge === "pending") return pendingListings;
@@ -136,11 +134,11 @@ function LayoutComponent({ children }: { children: React.ReactNode }) {
                 color: "#B07D2A",
               },
               { label: `${liveListings} live`, bg: "#EBFAEB", color: "#008A05" },
-              {
-                label: `${activeAgentCount} agents`,
-                bg: "#E8F0FB",
-                color: "#0066CC",
-              },
+              ...(registeredAgents > 0 ? [{
+                label: `${registeredAgents} agents`,
+                  bg: "#E8F0FB",
+                  color: "#0066CC",
+                }] : []),
               {
                 label: `${totalUsers} users`,
                 bg: "#F3F0FF",
