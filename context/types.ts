@@ -49,9 +49,12 @@ export interface ToastState {
 
 export interface AppContextType {
   dashboardData: AdminDashboardResponse;
+  toasts: ToastState[];
   showToast: (message: string, type: ToastState["type"]) => void;
   user: User | null;
   userStatus: UserStatus;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 export const initialDashboardData: AdminDashboardResponse = {

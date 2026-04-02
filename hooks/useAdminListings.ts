@@ -97,6 +97,7 @@ export function useAdminListings() {
   const searchParams = useSearchParams();
 
   const filter = (searchParams.get("filter") || "pending") as Filter;
+  const searchQuery = (searchParams.get("q") || "").trim();
   const page = getInt(searchParams.get("page"), 1);
   const pageSize = Math.min(getInt(searchParams.get("pageSize") ?? searchParams.get("limit"), 8), 100);
 
@@ -114,17 +115,18 @@ export function useAdminListings() {
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentQueryKey = useMemo(() => {
-    return JSON.stringify({ filter, page, pageSize });
-  }, [filter, page, pageSize]);
+    return JSON.stringify({ filter, page, pageSize, q: searchQuery });
+  }, [filter, page, pageSize, searchQuery]);
 
   const fetchList = useCallback(
-    async (opts: { filter: Filter; page: number; pageSize: number }) => {
+    async (opts: { filter: Filter; page: number; pageSize: number; q: string }) => {
       const apiStatus = mapFilterToApiStatus(opts.filter);
       const qs = new URLSearchParams();
       qs.set("page", String(opts.page));
       qs.set("pageSize", String(opts.pageSize));
       // backend expects `status`
       qs.set("status", apiStatus);
+      if (opts.q.trim()) qs.set("q", opts.q.trim());
 
       const url = `${ADMIN_API_BASE_URL}/api/admin/properties?${qs.toString()}`;
       const res = await fetch(url, { credentials: "include" });
@@ -157,6 +159,7 @@ export function useAdminListings() {
         qs.set("page", "1");
         qs.set("pageSize", "1"); // just to get pagination.total
         qs.set("status", apiStatus);
+        if (searchQuery) qs.set("q", searchQuery);
 
         const url = `${ADMIN_API_BASE_URL}/api/admin/properties?${qs.toString()}`;
         const res = await fetch(url, { credentials: "include" });
@@ -180,7 +183,7 @@ export function useAdminListings() {
       rejected: byStatus.rejected,
       all: byStatus.pending + byStatus.live + byStatus.rejected,
     });
-  }, []);
+  }, [searchQuery]);
 
   const refreshNow = useCallback(
     async (prefetchNext: boolean, force = false) => {
@@ -190,7 +193,7 @@ export function useAdminListings() {
         setAdminListings(cached.items);
         setPagination(cached.pagination);
       } else {
-        const entry = await fetchList({ filter, page, pageSize });
+        const entry = await fetchList({ filter, page, pageSize, q: searchQuery });
         cacheRef.current.set(key, entry);
         setAdminListings(entry.items);
         setPagination(entry.pagination);
@@ -202,7 +205,7 @@ export function useAdminListings() {
         const nextPage = page + 1;
         const nextKey = JSON.stringify({ filter, page: nextPage, pageSize });
         if (!cacheRef.current.has(nextKey)) {
-          fetchList({ filter, page: nextPage, pageSize })
+          fetchList({ filter, page: nextPage, pageSize, q: searchQuery })
             .then((entry) => cacheRef.current.set(nextKey, entry))
             .catch(() => {
               /* ignore prefetch failures */
@@ -210,7 +213,7 @@ export function useAdminListings() {
         }
       }
     },
-    [currentQueryKey, fetchList, fetchTabCounts, filter, page, pageSize]
+    [currentQueryKey, fetchList, fetchTabCounts, filter, page, pageSize, searchQuery]
   );
 
   const scheduleRefresh = useCallback(
@@ -227,7 +230,7 @@ export function useAdminListings() {
   useEffect(() => {
     void refreshNow(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, page, pageSize]);
+  }, [filter, page, pageSize, searchQuery]);
 
   const mutate = useCallback(
     async (propertyId: string, body: Record<string, unknown>, method: "PATCH" | "PUT" | "DELETE") => {
@@ -289,8 +292,21 @@ export function useAdminListings() {
     [router, searchParams]
   );
 
+  const setSearchQueryAndSyncUrl = useCallback(
+    (nextQuery: string) => {
+      const sp = new URLSearchParams(searchParams.toString());
+      const value = nextQuery.trim();
+      if (value) sp.set("q", value);
+      else sp.delete("q");
+      sp.set("page", "1");
+      router.replace(`?${sp.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
+
   return {
     filter,
+    searchQuery,
     adminListings,
     counts,
     page,
@@ -298,6 +314,7 @@ export function useAdminListings() {
     totalPages: pagination.totalPages,
     pagination,
     setFilter: setFilterAndSyncUrl,
+    setSearchQuery: setSearchQueryAndSyncUrl,
     setPage: setPageAndSyncUrl,
     approveAdminListing,
     rejectAdminListing,

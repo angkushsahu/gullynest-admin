@@ -1,5 +1,6 @@
 "use client";
-import { useApp } from "@/context/AppContext";
+
+import { useAdminApp } from "@/context/AdminAppContext";
 
 const ICONS = {
   success: (
@@ -47,13 +48,13 @@ const ICONS = {
 };
 
 export default function ToastContainer() {
-    return null;
-//   const { toasts } = useApp();
+  const { toasts } = useAdminApp();
+
   return (
-    <div className="fixed bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 z-[300] flex flex-col gap-2 items-center pointer-events-none px-4">
+    <div className="fixed bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 z-300 flex flex-col gap-2 items-center pointer-events-none px-4">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast toast-${t.type} pointer-events-auto`}>
-          <span className="flex-shrink-0 opacity-90">{ICONS[t.type]}</span>
+        <div key={t.id} className={`bg-white toast toast-${t.type} pointer-events-auto`}>
+          <span className="shrink-0 opacity-90">{ICONS[t.type]}</span>
           {t.message}
         </div>
       ))}

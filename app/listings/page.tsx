@@ -24,6 +24,8 @@ function ListingsContent() {
     filter,
     setFilter,
     adminListings,
+    searchQuery,
+    setSearchQuery,
     counts,
     page,
     totalPages,
@@ -108,10 +110,12 @@ function ListingsContent() {
             {filtered.length} listings
           </div>
         </div>
-        <div className="flex gap-2">
-          <button className="btn btn-outline btn-sm">Export CSV</button>
-          <button className="btn btn-secondary btn-sm">+ Add manually</button>
-        </div>
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="input py-2 px-4 rounded-full text-[13px] w-72"
+          placeholder="Search by ID, lister, or type..."
+        />
       </div>
 
       {/* Filter tabs */}
