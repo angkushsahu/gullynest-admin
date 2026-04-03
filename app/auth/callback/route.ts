@@ -2,9 +2,14 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams, origin: requestOrigin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/'
+
+  // Prefer the configured app URL over request.url origin — behind a reverse proxy
+  // request.url may resolve to the internal host (e.g. localhost:3000) instead of
+  // the public-facing domain.
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? requestOrigin
 
   if (code) {
     try {

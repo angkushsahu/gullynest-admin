@@ -44,7 +44,7 @@ type UsersApiResponse = {
   };
 };
 
-const ADMIN_API_BASE_URL = "";
+const ADMIN_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const AVATAR_COLORS = [
   { bg: "#E1F5EE", tc: "#0F6E56" },
   { bg: "#EEEDFE", tc: "#3C3489" },

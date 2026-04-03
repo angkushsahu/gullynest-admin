@@ -82,7 +82,7 @@ export default function AdminPasses() {
     (async function loadPasses() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/admin/passes?page=${page}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/passes?page=${page}`, {
           credentials: "include",
         });
         if (!response.ok) throw new Error("failed_to_load_passes");

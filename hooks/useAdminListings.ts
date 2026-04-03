@@ -54,7 +54,7 @@ type ApiListResponse = {
 
 type PaginationState = ApiListResponse["pagination"];
 
-const ADMIN_API_BASE_URL = "";
+const ADMIN_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const PHOTO_PLACEHOLDERS = ["ph-a", "ph-b", "ph-c", "ph-d", "ph-e", "ph-f", "ph-g", "ph-h"] as const;
 
 function placeholderPhoto(id: string) {

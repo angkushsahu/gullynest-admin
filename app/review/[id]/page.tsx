@@ -90,7 +90,7 @@ export default function AdminReview() {
         return;
       }
       setLoading(true);
-      const response = await fetch(`/api/admin/properties/${propertyId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/properties/${propertyId}`, {
         credentials: "include",
       });
       if (!response.ok) {
