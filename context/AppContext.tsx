@@ -7,6 +7,8 @@ import React, {
   useEffect,
 } from "react";
 import { Listing, Room, LISTINGS, ROOMS } from "@/lib/data";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 export type UserRole = "searcher" | "lister" | null;
 
 export interface User {
