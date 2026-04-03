@@ -54,7 +54,6 @@ type ApiListResponse = {
 
 type PaginationState = ApiListResponse["pagination"];
 
-const ADMIN_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const PHOTO_PLACEHOLDERS = ["ph-a", "ph-b", "ph-c", "ph-d", "ph-e", "ph-f", "ph-g", "ph-h"] as const;
 
 function placeholderPhoto(id: string) {
@@ -128,7 +127,7 @@ export function useAdminListings() {
       qs.set("status", apiStatus);
       if (opts.q.trim()) qs.set("q", opts.q.trim());
 
-      const url = `${ADMIN_API_BASE_URL}/api/admin/properties?${qs.toString()}`;
+      const url = `/api/admin/properties?${qs.toString()}`;
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         throw new Error(`Failed to fetch admin listings (${res.status})`);
@@ -159,7 +158,7 @@ export function useAdminListings() {
         qs.set("status", apiStatus);
         if (searchQuery) qs.set("q", searchQuery);
 
-        const url = `${ADMIN_API_BASE_URL}/api/admin/properties?${qs.toString()}`;
+        const url = `/api/admin/properties?${qs.toString()}`;
         const res = await fetch(url, { credentials: "include" });
         if (!res.ok) return { status: st, total: 0 };
         const json = (await res.json()) as ApiListResponse;
@@ -233,7 +232,7 @@ export function useAdminListings() {
 
   const mutate = useCallback(
     async (propertyId: string, body: Record<string, unknown>, method: "PATCH" | "PUT" | "DELETE") => {
-      const url = `${ADMIN_API_BASE_URL}/api/admin/properties/${encodeURIComponent(propertyId)}`;
+      const url = `/api/admin/properties/${encodeURIComponent(propertyId)}`;
       const res = await fetch(url, {
         method,
         credentials: "include",

@@ -94,7 +94,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     (async function loadActivity() {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/activity`, {
+        const response = await fetch("/api/admin/activity", {
           credentials: "include",
         });
         if (!response.ok) return;
