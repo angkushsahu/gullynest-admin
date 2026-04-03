@@ -17,6 +17,7 @@ const STATUS_BADGE: Record<string, string> = {
   pending: "badge-pending",
   live: "badge-live",
   rejected: "badge-rejected",
+  draft: "badge-draft",
 };
 
 function ListingsContent() {
@@ -45,6 +46,7 @@ function ListingsContent() {
     { id: "all", label: "All", count: counts.all },
     { id: "live", label: "Live", count: counts.live },
     { id: "rejected", label: "Rejected", count: counts.rejected },
+    { id: "draft", label: "Draft", count: counts.draft },
   ];
 
   const toggleSelect = (id: string) =>
@@ -104,7 +106,9 @@ function ListingsContent() {
                 ? "Live listings"
                 : filter === "rejected"
                   ? "Rejected"
-                  : "All listings"}
+                  : filter === "draft"
+                    ? "Drafts"
+                    : "All listings"}
           </h1>
           <div className="text-[14px] text-[#717171] mt-0.5">
             {filtered.length} listings
@@ -232,7 +236,7 @@ function ListingsContent() {
             </div>
             <div className="text-[13px] text-[#717171] truncate">{listing.lister}</div>
             <div className="text-[13px] font-semibold">
-              ₹{Math.round(listing.rent / 1000)}k
+              {listing.rent >= 1000 ? `₹${Math.round(listing.rent / 1000)}k` : `₹${listing.rent}`}
             </div>
             <div
               className="text-[13px]"
@@ -247,7 +251,7 @@ function ListingsContent() {
             </div>
 
             <div className="flex items-center gap-2 py-2">
-              {listing.status === "pending" && (
+              {listing.status === "pending" ? (
                 <Link
                   href={`/review/${listing.id}`}
                   className="text-[12px] font-semibold text-white px-3 py-1.5 rounded-lg no-underline hover:opacity-90 transition-opacity"
@@ -255,27 +259,20 @@ function ListingsContent() {
                 >
                   Review →
                 </Link>
-              )}
-              {listing.status === "live" &&
-                (listing.verified ? (
-                  <span className="text-[10px] font-semibold text-[#008A05] bg-[#EBFAEB] border border-[#CDECCF] px-2 py-1 rounded-full leading-none">
-                    Verified
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => approveAdminListing(listing.id, true)}
-                    className="text-[11px] font-medium text-[#0066CC] bg-transparent border-0 cursor-pointer hover:underline font-[Sora,sans-serif] p-0"
+              ) : (
+                <>
+                  {listing.status === "live" && listing.verified && (
+                    <span className="text-[10px] font-semibold text-[#008A05] bg-[#EBFAEB] border border-[#CDECCF] px-2 py-1 rounded-full leading-none">
+                      Verified
+                    </span>
+                  )}
+                  <Link
+                    href={`/review/${listing.id}`}
+                    className="text-[12px] font-medium text-[#717171] no-underline hover:text-[#222]"
                   >
-                    + Verified
-                  </button>
-                ))}
-              {listing.status !== "pending" && (
-                <Link
-                  href={`/review/${listing.id}`}
-                  className="text-[12px] font-medium text-[#717171] no-underline hover:text-[#222]"
-                >
-                  View
-                </Link>
+                    View
+                  </Link>
+                </>
               )}
               <button
                 onClick={() => setConfirmDelete(listing.id)}

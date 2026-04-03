@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export type Filter = "pending" | "live" | "rejected" | "all";
+export type Filter = "pending" | "live" | "rejected" | "draft" | "all";
 type ApiStatus = "pending" | "live" | "rejected" | "draft" | "all";
 
-type TabCounts = { pending: number; live: number; rejected: number; all: number };
+type TabCounts = { pending: number; live: number; rejected: number; draft: number; all: number };
 
 type ApiAdminProperty = {
   id: string;
@@ -33,7 +33,7 @@ type AdminListing = {
   type: "tenant" | "owner" | "agent";
   rent: number;
   fee: number;
-  status: "pending" | "live" | "rejected";
+  status: "pending" | "live" | "rejected" | "draft";
   submitted: string;
   photo: string;
   answers: number;
@@ -72,7 +72,7 @@ function mapApiToUiListing(p: ApiAdminProperty): AdminListing {
     type: p.type,
     rent: p.rent,
     fee: p.fee,
-    status: p.status === "draft" ? "pending" : p.status,
+    status: p.status,
     submitted: p.submitted,
     photo: placeholderPhoto(p.id),
     answers: 0,
@@ -102,7 +102,7 @@ export function useAdminListings() {
   const pageSize = Math.min(getInt(searchParams.get("pageSize") ?? searchParams.get("limit"), 8), 100);
 
   const [adminListings, setAdminListings] = useState<AdminListing[]>([]);
-  const [counts, setCounts] = useState<TabCounts>({ pending: 0, live: 0, rejected: 0, all: 0 });
+  const [counts, setCounts] = useState<TabCounts>({ pending: 0, live: 0, rejected: 0, draft: 0, all: 0 });
   const [pagination, setPagination] = useState<PaginationState>({
     page,
     pageSize,
@@ -136,8 +136,6 @@ export function useAdminListings() {
       const json = (await res.json()) as ApiListResponse;
 
       const items = json.items
-        // UI only supports pending/live/rejected
-        .filter((x) => x.status !== "draft")
         .filter((x) => opts.filter === "all" || x.status === opts.filter)
         .map(mapApiToUiListing);
 
@@ -150,7 +148,7 @@ export function useAdminListings() {
   );
 
   const fetchTabCounts = useCallback(async () => {
-    const statuses: Array<"pending" | "live" | "rejected"> = ["pending", "live", "rejected"];
+    const statuses: Array<"pending" | "live" | "rejected" | "draft"> = ["pending", "live", "rejected", "draft"];
 
     const results = await Promise.all(
       statuses.map(async (st) => {
@@ -169,19 +167,20 @@ export function useAdminListings() {
       })
     );
 
-    const byStatus = results.reduce<Record<"pending" | "live" | "rejected", number>>(
+    const byStatus = results.reduce<Record<"pending" | "live" | "rejected" | "draft", number>>(
       (acc, cur) => {
         acc[cur.status] = cur.total;
         return acc;
       },
-      { pending: 0, live: 0, rejected: 0 }
+      { pending: 0, live: 0, rejected: 0, draft: 0 }
     );
 
     setCounts({
       pending: byStatus.pending,
       live: byStatus.live,
       rejected: byStatus.rejected,
-      all: byStatus.pending + byStatus.live + byStatus.rejected,
+      draft: byStatus.draft,
+      all: byStatus.pending + byStatus.live + byStatus.rejected + byStatus.draft,
     });
   }, [searchQuery]);
 

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type UserTab = "searchers" | "listers" | "agents";
@@ -15,6 +16,7 @@ type AdminUserItem = {
   packExpiry: string | null;
   createdAt: string;
   updatedAt: string;
+  kyc?: { aadhaarDone: boolean; aadhaarFileUrl: string | null } | null;
   counts: {
     listings: number;
     favorites: number;
@@ -262,9 +264,9 @@ export default function AdminUsers() {
                   <div className="text-[13px]">{u.counts.favorites}</div>
                   <div className="text-[13px] font-semibold text-[#008A05]">{u.counts.unlocks}</div>
                   <div className="text-[13px] text-[#717171]">{u.packCount}</div>
-                  <button className="text-[12px] font-medium text-[#0066CC] bg-transparent border-0 cursor-pointer hover:underline font-[Sora,sans-serif] p-0">
+                  <Link href={`/users/${u.id}`} className="text-[12px] font-medium text-[#0066CC] no-underline hover:underline">
                     View
-                  </button>
+                  </Link>
                 </div>
               );
             })}
@@ -311,9 +313,9 @@ export default function AdminUsers() {
                     {u.counts.pendingListings}
                   </div>
                   <div className="text-[13px] text-[#717171]">{shortDate(u.createdAt)}</div>
-                  <button className="text-[12px] font-medium text-[#0066CC] bg-transparent border-0 cursor-pointer hover:underline font-[Sora,sans-serif] p-0">
+                  <Link href={`/users/${u.id}`} className="text-[12px] font-medium text-[#0066CC] no-underline hover:underline">
                     View
-                  </button>
+                  </Link>
                 </div>
               );
             })}
@@ -324,50 +326,47 @@ export default function AdminUsers() {
           <>
             <div
               className="grid bg-[#F7F7F7] border-b border-[#E8E8E8] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#B0B0B0]"
-              style={{ gridTemplateColumns: "1fr 200px 100px 120px 100px 120px" }}
+              style={{ gridTemplateColumns: "1fr 180px 90px 90px 100px 90px 120px" }}
             >
-              {["Agent", "RERA No.", "Status", "Listings", "Expiry", "Action"].map(
-                (h) => (
-                  <div key={h}>{h}</div>
-                )
-              )}
+              {["Agent", "RERA No.", "Status", "KYC", "Listings", "Expiry", "Action"].map((h) => (
+                <div key={h}>{h}</div>
+              ))}
             </div>
             {rows.map((a) => {
               const status = a.counts.agentListings > 0 ? "Active" : "Expired";
+              const kycDone = a.kyc?.aadhaarDone ?? false;
               return (
                 <div
                   key={a.id}
                   className="grid items-center px-5 border-b border-[#E8E8E8] last:border-0 hover:bg-[#FAFAFA] transition-colors"
                   style={{
-                    gridTemplateColumns: "1fr 200px 100px 120px 100px 120px",
+                    gridTemplateColumns: "1fr 180px 90px 90px 100px 90px 120px",
                     minHeight: "64px",
                     opacity: status === "Expired" ? 0.6 : 1,
                   }}
                 >
                   <div className="text-[13px] font-semibold">{a.name}</div>
-                  <div className="text-[11px] text-[#717171] font-mono truncate">
-                    {a.email ?? "—"}
+                  <div className="text-[11px] text-[#717171] font-mono truncate">{a.email ?? "—"}</div>
+                  <div>
+                    <span className={`badge ${status === "Active" ? "badge-live" : "badge-rejected"}`}>
+                      {status}
+                    </span>
                   </div>
                   <div>
-                    <span
-                      className={`badge ${status === "Active" ? "badge-live" : "badge-rejected"}`}
-                    >
-                      {status}
+                    <span className={`badge ${kycDone ? "badge-live" : "badge-pending"}`}>
+                      {kycDone ? "Verified" : "Pending"}
                     </span>
                   </div>
                   <div className="text-[13px]">
                     {a.counts.agentListings}/{a.counts.listings || a.counts.agentListings}
                   </div>
-                  <div
-                    className="text-[13px]"
-                    style={{ color: status === "Expired" ? "#FF5A5F" : "#717171" }}
-                  >
+                  <div className="text-[13px]" style={{ color: status === "Expired" ? "#FF5A5F" : "#717171" }}>
                     {a.packExpiry ? shortDate(a.packExpiry) : "—"}
                   </div>
                   <div className="flex gap-2">
-                    <button className="text-[12px] font-medium text-[#0066CC] bg-transparent border-0 cursor-pointer hover:underline font-[Sora,sans-serif] p-0">
+                    <Link href={`/users/${a.id}`} className="text-[12px] font-medium text-[#0066CC] no-underline hover:underline">
                       View
-                    </button>
+                    </Link>
                     <button className="text-[12px] font-medium text-accent bg-transparent border-0 cursor-pointer hover:underline font-[Sora,sans-serif] p-0">
                       Suspend
                     </button>

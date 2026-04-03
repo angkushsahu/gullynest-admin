@@ -73,6 +73,8 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
     }
 
     let active = true;
+    let loadedToken: string | null = null;
+
     (async function bootstrap() {
       const {
         data: { session },
@@ -83,20 +85,25 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         return;
       }
+      loadedToken = session.access_token;
       await fetchAdminUser();
       await fetchDashboard();
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!active) return;
-      if (!session) {
+      if (event === "SIGNED_OUT" || !session) {
+        loadedToken = null;
         setUser(null);
         setDashboardData(initialDashboardData);
         setUserStatus("unauthenticated");
         return;
       }
-      await fetchAdminUser();
-      await fetchDashboard();
+      if (event === "SIGNED_IN" && session.access_token !== loadedToken) {
+        loadedToken = session.access_token;
+        await fetchAdminUser();
+        await fetchDashboard();
+      }
     });
 
     return () => {
