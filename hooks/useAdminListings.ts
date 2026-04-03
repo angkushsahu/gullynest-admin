@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { apiFetch } from "@/lib/api-fetch";
 
 export type Filter = "pending" | "live" | "rejected" | "draft" | "all";
 type ApiStatus = "pending" | "live" | "rejected" | "draft" | "all";
@@ -127,8 +128,7 @@ export function useAdminListings() {
       qs.set("status", apiStatus);
       if (opts.q.trim()) qs.set("q", opts.q.trim());
 
-      const url = `/api/admin/properties?${qs.toString()}`;
-      const res = await fetch(url, { credentials: "include" });
+      const res = await apiFetch(`/api/admin/properties?${qs.toString()}`, { credentials: "include" });
       if (!res.ok) {
         throw new Error(`Failed to fetch admin listings (${res.status})`);
       }
@@ -158,8 +158,7 @@ export function useAdminListings() {
         qs.set("status", apiStatus);
         if (searchQuery) qs.set("q", searchQuery);
 
-        const url = `/api/admin/properties?${qs.toString()}`;
-        const res = await fetch(url, { credentials: "include" });
+        const res = await apiFetch(`/api/admin/properties?${qs.toString()}`, { credentials: "include" });
         if (!res.ok) return { status: st, total: 0 };
         const json = (await res.json()) as ApiListResponse;
         return { status: st, total: json.pagination.total };
@@ -232,8 +231,7 @@ export function useAdminListings() {
 
   const mutate = useCallback(
     async (propertyId: string, body: Record<string, unknown>, method: "PATCH" | "PUT" | "DELETE") => {
-      const url = `/api/admin/properties/${encodeURIComponent(propertyId)}`;
-      const res = await fetch(url, {
+      const res = await apiFetch(`/api/admin/properties/${encodeURIComponent(propertyId)}`, {
         method,
         credentials: "include",
         headers: { "Content-Type": "application/json" },

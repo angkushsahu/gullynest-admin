@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAdminApp } from "@/context/AdminAppContext";
+import { apiFetch } from "@/lib/api-fetch";
 
 const DAY = [
   "Sunday",
@@ -94,7 +95,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     (async function loadActivity() {
       try {
-        const response = await fetch("/api/admin/activity", {
+        const response = await apiFetch("/api/admin/activity", {
           credentials: "include",
         });
         if (!response.ok) return;

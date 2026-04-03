@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAdminListings } from "@/hooks/useAdminListings";
 import { useAdminApp } from "@/context/AdminAppContext";
+import { apiFetch } from "@/lib/api-fetch";
 
 const CATEGORY_ORDER = [
   "LIVING_ROOM","BEDROOM","BATHROOM","KITCHEN",
@@ -90,7 +91,7 @@ export default function AdminReview() {
         return;
       }
       setLoading(true);
-      const response = await fetch(`/api/admin/properties/${propertyId}`, {
+      const response = await apiFetch(`/api/admin/properties/${propertyId}`, {
         credentials: "include",
       });
       if (!response.ok) {

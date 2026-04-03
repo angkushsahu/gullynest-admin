@@ -11,6 +11,7 @@ import React, {
 
 import { AppContextType, ToastState, User, UserStatus, AdminDashboardResponse, initialDashboardData } from "./types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { apiFetch, setApiToken } from "@/lib/api-fetch";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -37,7 +38,7 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
   const fetchAdminUser = useCallback(async () => {
     setUserStatus("loading");
     try {
-      const response = await fetch("/api/admin", { credentials: "include" });
+      const response = await apiFetch("/api/admin", { credentials: "include" });
       if (!response.ok) {
         setUser(null);
         setUserStatus("unauthenticated");
@@ -57,7 +58,7 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
 
   const fetchDashboard = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/dashboard", { credentials: "include" });
+      const response = await apiFetch("/api/admin/dashboard", { credentials: "include" });
       if (!response.ok) return;
       const data = (await response.json()) as AdminDashboardResponse;
       setDashboardData(data);
@@ -86,6 +87,7 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       loadedToken = session.access_token;
+      setApiToken(loadedToken);
       await fetchAdminUser();
       await fetchDashboard();
     })();
@@ -94,6 +96,7 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
       if (!active) return;
       if (event === "SIGNED_OUT" || !session) {
         loadedToken = null;
+        setApiToken(null);
         setUser(null);
         setDashboardData(initialDashboardData);
         setUserStatus("unauthenticated");
@@ -101,6 +104,7 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
       }
       if (event === "SIGNED_IN" && session.access_token !== loadedToken) {
         loadedToken = session.access_token;
+        setApiToken(loadedToken);
         await fetchAdminUser();
         await fetchDashboard();
       }
@@ -129,6 +133,7 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
+    setApiToken(null);
     setUser(null);
     setDashboardData(initialDashboardData);
     setUserStatus("unauthenticated");

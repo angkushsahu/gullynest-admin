@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { apiFetch } from "@/lib/api-fetch";
 
 type UserTab = "searchers" | "listers" | "agents";
 
@@ -44,7 +45,6 @@ type UsersApiResponse = {
   };
 };
 
-const ADMIN_API_BASE_URL = "";
 const AVATAR_COLORS = [
   { bg: "#E1F5EE", tc: "#0F6E56" },
   { bg: "#EEEDFE", tc: "#3C3489" },
@@ -131,7 +131,7 @@ export default function AdminUsers() {
         sp.set("q", q);
         sp.set("page", String(page));
         sp.set("pageSize", String(pageSize));
-        const r = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users?${sp.toString()}`, {
+        const r = await apiFetch(`/api/admin/users?${sp.toString()}`, {
           credentials: "include",
         });
         if (!r.ok) throw new Error("Failed to fetch users");
@@ -157,7 +157,7 @@ export default function AdminUsers() {
           sp.set("q", q);
           sp.set("page", "1");
           sp.set("pageSize", "1");
-          const r = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users?${sp.toString()}`, {
+          const r = await apiFetch(`/api/admin/users?${sp.toString()}`, {
             credentials: "include",
           });
           if (!r.ok) return { t, total: 0 };

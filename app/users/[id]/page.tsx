@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-
-const ADMIN_API_BASE_URL = "";
+import { apiFetch } from "@/lib/api-fetch";
 
 const AVATAR_COLORS = [
   { bg: "#E1F5EE", tc: "#0F6E56" },
@@ -80,7 +79,7 @@ export default function UserDetailPage() {
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
     setLoading(true);
-    fetch(`${ADMIN_API_BASE_URL}/api/admin/users/${userId}`, { credentials: "include" })
+    apiFetch(`/api/admin/users/${userId}`, { credentials: "include" })
       .then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((data: { item?: UserDetail }) => setUser(data.item ?? null))
       .catch(() => setUser(null))

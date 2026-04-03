@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { Listing, Room, LISTINGS, ROOMS } from "@/lib/data";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { apiFetch } from "@/lib/api-fetch";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 export type UserRole = "searcher" | "lister" | null;
 
@@ -217,7 +218,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const r = await fetch("/api/me", { credentials: "same-origin" });
+      const r = await apiFetch("/api/me", { credentials: "same-origin" });
       if (r.status === 503) {
         setApiDbEnabled(false);
         const supabase = createSupabaseBrowserClient();
@@ -376,7 +377,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           !isSaved ? "success" : "info"
         );
         try {
-          const r = await fetch("/api/favorites", {
+          const r = await apiFetch("/api/favorites", {
             method: "POST",
             credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
@@ -411,7 +412,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!user) return false;
       if (apiDbEnabled) {
         try {
-          const r = await fetch("/api/unlocks", {
+          const r = await apiFetch("/api/unlocks", {
             method: "POST",
             credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
