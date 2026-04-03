@@ -90,7 +90,7 @@ export default function AdminReview() {
         return;
       }
       setLoading(true);
-      const response = await fetch(`http://localhost:3000/api/admin/properties/${propertyId}`, {
+      const response = await fetch(`/api/admin/properties/${propertyId}`, {
         credentials: "include",
       });
       if (!response.ok) {

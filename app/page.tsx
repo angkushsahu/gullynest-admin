@@ -94,7 +94,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     (async function loadActivity() {
       try {
-        const response = await fetch("http://localhost:3000/api/admin/activity", {
+        const response = await fetch("/api/admin/activity", {
           credentials: "include",
         });
         if (!response.ok) return;

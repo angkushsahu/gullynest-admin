@@ -37,7 +37,7 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
   const fetchAdminUser = useCallback(async () => {
     setUserStatus("loading");
     try {
-      const response = await fetch("http://localhost:3000/api/admin", { credentials: "include" });
+      const response = await fetch("/api/admin", { credentials: "include" });
       if (!response.ok) {
         setUser(null);
         setUserStatus("unauthenticated");
@@ -57,7 +57,7 @@ export function AdminAppProvider({ children }: { children: React.ReactNode }) {
 
   const fetchDashboard = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/admin/dashboard", { credentials: "include" });
+      const response = await fetch("/api/admin/dashboard", { credentials: "include" });
       if (!response.ok) return;
       const data = (await response.json()) as AdminDashboardResponse;
       setDashboardData(data);

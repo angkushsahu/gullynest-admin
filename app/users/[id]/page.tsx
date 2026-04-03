@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-const ADMIN_API_BASE_URL = "http://localhost:3000";
+const ADMIN_API_BASE_URL = "";
 
 const AVATAR_COLORS = [
   { bg: "#E1F5EE", tc: "#0F6E56" },
