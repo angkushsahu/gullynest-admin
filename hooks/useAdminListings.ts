@@ -14,6 +14,7 @@ type ApiAdminProperty = {
   title: string;
   lister: string;
   phone: string;
+  listerId: string;
   type: "tenant" | "owner" | "agent";
   rent: number;
   fee: number;
@@ -31,6 +32,7 @@ type AdminListing = {
   title: string;
   lister: string;
   phone: string;
+  listerId: string;
   type: "tenant" | "owner" | "agent";
   rent: number;
   fee: number;
@@ -69,6 +71,7 @@ function mapApiToUiListing(p: ApiAdminProperty): AdminListing {
     title: p.title,
     lister: p.lister,
     phone: p.phone,
+    listerId: p.listerId,
     type: p.type,
     rent: p.rent,
     fee: p.fee,
@@ -245,29 +248,6 @@ export function useAdminListings() {
     [scheduleRefresh]
   );
 
-  const approveAdminListing = useCallback(
-    async (id: string, verified: boolean = true) => {
-      await mutate(id, { action: "approve", verified }, "PATCH");
-    },
-    [mutate]
-  );
-
-  const rejectAdminListing = useCallback(
-    async (id: string, _reason: string) => {
-      // Reason is currently not persisted server-side; kept for UI compatibility.
-      void _reason;
-      await mutate(id, { action: "reject" }, "PATCH");
-    },
-    [mutate]
-  );
-
-  const deleteAdminListing = useCallback(
-    async (id: string) => {
-      await mutate(id, {}, "DELETE");
-    },
-    [mutate]
-  );
-
   const setFilterAndSyncUrl = useCallback(
     (next: Filter) => {
       const sp = new URLSearchParams(searchParams.toString());
@@ -311,10 +291,7 @@ export function useAdminListings() {
     pagination,
     setFilter: setFilterAndSyncUrl,
     setSearchQuery: setSearchQueryAndSyncUrl,
-    setPage: setPageAndSyncUrl,
-    approveAdminListing,
-    rejectAdminListing,
-    deleteAdminListing,
+    setPage: setPageAndSyncUrl
   };
 }
 

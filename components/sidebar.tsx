@@ -16,6 +16,7 @@ const NAV = [
       label: "All listings",
       badge: "all",
     },
+    { href: "/create", icon: "➕", label: "New listing" },
     { href: "/users", icon: "👥", label: "Users" },
     { href: "/passes", icon: "💳", label: "Agent passes" },
   ];

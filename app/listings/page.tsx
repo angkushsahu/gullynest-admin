@@ -2,6 +2,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useAdminListings, type Filter } from "@/hooks/useAdminListings";
+import { useAdminApp } from "@/context/AdminAppContext";
 
 const TYPE_BADGE: Record<string, string> = {
   tenant: "badge-tenant",
@@ -31,13 +32,8 @@ function ListingsContent() {
     page,
     totalPages,
     setPage,
-    approveAdminListing,
-    rejectAdminListing,
-    deleteAdminListing,
   } = useAdminListings();
-
-  const [selected, setSelected] = useState<string[]>([]);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const { user } = useAdminApp();
 
   const filtered = adminListings.filter((l) => filter === "all" || l.status === filter);
 
@@ -49,54 +45,8 @@ function ListingsContent() {
     { id: "draft", label: "Draft", count: counts.draft },
   ];
 
-  const toggleSelect = (id: string) =>
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  const selectAll = (check: boolean) =>
-    setSelected(check ? filtered.map((l) => l.id) : []);
-
-  const handleBulkApprove = () => {
-    selected.forEach((id) => approveAdminListing(id));
-    setSelected([]);
-  };
-  const handleBulkReject = () => {
-    selected.forEach((id) => rejectAdminListing(id, "Bulk rejected"));
-    setSelected([]);
-  };
-  const handleDelete = (id: string) => {
-    deleteAdminListing(id);
-    setConfirmDelete(null);
-  };
-
   return (
     <div className="p-8 animate-fade-up">
-      {/* Delete confirm modal */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 max-w-[360px] w-full mx-4 shadow-xl animate-scale-in">
-            <h3 className="text-[16px] font-bold mb-2">Delete listing?</h3>
-            <p className="text-[13px] text-[#717171] mb-5">
-              This cannot be undone. The lister will not be notified.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="btn btn-outline btn-md flex-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(confirmDelete)}
-                className="btn btn-primary btn-md flex-1"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[22px] font-bold" style={{ letterSpacing: "-0.3px" }}>
@@ -129,7 +79,6 @@ function ListingsContent() {
             key={tab.id}
             onClick={() => {
               setFilter(tab.id);
-              setSelected([]);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-medium border-[1.5px] cursor-pointer transition-all font-[Sora,sans-serif] ${filter === tab.id ? "bg-[#222] text-white border-[#222]" : "bg-white text-[#717171] border-[#DDDDDD] hover:border-[#222]"}`}
           >
@@ -143,44 +92,13 @@ function ListingsContent() {
         ))}
       </div>
 
-      {/* Batch bar */}
-      {selected.length > 0 && (
-        <div className="bg-[#222] text-white rounded-xl px-5 py-3 flex items-center gap-4 mb-4 animate-slide-down">
-          <span className="text-[13px] font-medium">{selected.length} selected</span>
-          <button
-            onClick={handleBulkApprove}
-            className="text-[13px] font-semibold text-[#EBFAEB] bg-transparent border-0 cursor-pointer hover:text-white transition-colors font-[Sora,sans-serif]"
-          >
-            Approve all ✓
-          </button>
-          <button
-            onClick={handleBulkReject}
-            className="text-[13px] font-semibold text-[#FFD0D0] bg-transparent border-0 cursor-pointer hover:text-white transition-colors font-[Sora,sans-serif]"
-          >
-            Reject all ✗
-          </button>
-          <button
-            onClick={() => setSelected([])}
-            className="ml-auto text-[13px] text-white/60 bg-transparent border-0 cursor-pointer font-[Sora,sans-serif]"
-          >
-            Clear
-          </button>
-        </div>
-      )}
-
       {/* Table */}
       <div className="bg-white border border-[#E8E8E8] rounded-2xl overflow-hidden">
         {/* Header */}
         <div
           className="grid items-center bg-[#F7F7F7] border-b border-[#E8E8E8] px-5 py-3"
-          style={{ gridTemplateColumns: "32px 1fr 140px 130px 80px 70px 90px 140px" }}
+          style={{ gridTemplateColumns: "1fr 140px 130px 80px 70px 90px 140px" }}
         >
-          <input
-            type="checkbox"
-            className="cursor-pointer accent-[#222] w-4 h-4"
-            checked={selected.length === filtered.length && filtered.length > 0}
-            onChange={(e) => selectAll(e.target.checked)}
-          />
           {["Listing", "Type", "Lister", "Rent", "Fee", "Status", "Actions"].map((h) => (
             <div
               key={h}
@@ -202,17 +120,10 @@ function ListingsContent() {
             key={listing.id}
             className={`grid items-center px-5 border-b border-[#E8E8E8] last:border-0 transition-colors hover:bg-[#FAFAFA] ${listing.status === "rejected" ? "opacity-60" : ""}`}
             style={{
-              gridTemplateColumns: "32px 1fr 140px 130px 80px 70px 90px 140px",
+              gridTemplateColumns: "1fr 140px 130px 80px 70px 90px 140px",
               minHeight: "64px",
             }}
           >
-            <input
-              type="checkbox"
-              checked={selected.includes(listing.id)}
-              onChange={() => toggleSelect(listing.id)}
-              className="cursor-pointer accent-[#222] w-4 h-4"
-            />
-
             <div className="flex items-center gap-3 py-2">
               <div
                 className={`w-10 h-10 rounded-lg shrink-0 flex items-center justify-center text-xl opacity-40 ${listing.photo}`}
@@ -259,6 +170,23 @@ function ListingsContent() {
                 >
                   Review →
                 </Link>
+              ) : listing.status === "draft" ? (
+                listing.listerId === user?.id ? (
+                  <Link
+                    href={`/create?id=${listing.id}`}
+                    className="text-[12px] font-semibold text-white px-3 py-1.5 rounded-lg no-underline hover:opacity-90 transition-opacity"
+                    style={{ background: "#222" }}
+                  >
+                    Edit →
+                  </Link>
+                ) : (
+                  <span
+                    className="text-[12px] font-semibold text-[#B0B0B0] px-3 py-1.5 rounded-lg cursor-not-allowed"
+                    title="Only the admin who created this draft can edit it"
+                  >
+                    Edit →
+                  </span>
+                )
               ) : (
                 <>
                   {listing.status === "live" && listing.verified && (
@@ -274,12 +202,6 @@ function ListingsContent() {
                   </Link>
                 </>
               )}
-              <button
-                onClick={() => setConfirmDelete(listing.id)}
-                className="text-[12px] text-[#B0B0B0] bg-transparent border-0 cursor-pointer hover:text-accent transition-colors font-[Sora,sans-serif] p-0"
-              >
-                ✕
-              </button>
             </div>
           </div>
         ))}
