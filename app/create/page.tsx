@@ -228,12 +228,13 @@ export default function CreateListingPage() {
           ...prev,
           listingKind: (raw.listingKind as ListingKind) ?? prev.listingKind,
           flatKind: (raw.flatKind as FlatKind) ?? prev.flatKind,
-          location: raw.locality
+          location: raw.locality && raw.lat != null && raw.lng != null
             ? {
                 locality: raw.locality,
-                placeId: raw.placeId ?? undefined,
-                lat: raw.lat ?? undefined,
-                lng: raw.lng ?? undefined,
+                placeId: raw.placeId ?? '',
+                lat: raw.lat,
+                lng: raw.lng,
+                formattedAddress: raw.locality,
               }
             : prev.location,
           bhk: raw.bhk ?? prev.bhk,
@@ -259,7 +260,7 @@ export default function CreateListingPage() {
         // Restore insider answers if present
         const insiderAnswers = data.item?.insiderAnswers;
         if (insiderAnswers && insiderAnswers.length > 0) {
-          setSuggestions(insiderAnswers.map((a) => ({ question: a.question, answer: a.answer, honestDisclosure: a.honestDisclosure ?? false })));
+          setSuggestions(insiderAnswers.map((a) => ({ question: a.question, answer: a.answer, honestDisclosure: a.honestDisclosure ?? false, required: false })));
         }
       } catch {
         showToast("Error loading draft", "error");
