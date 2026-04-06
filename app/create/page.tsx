@@ -174,6 +174,7 @@ export default function CreateListingPage() {
   const [submittingPending, setSubmittingPending] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [photoCount, setPhotoCount] = useState(0);
+  const [initialPhotos, setInitialPhotos] = useState<import("@/components/PhotoUploader").UploadedPhoto[]>([]);
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>(buildInitialSuggestions);
   const [loadingDraft, setLoadingDraft] = useState(!!urlId);
   const hydratedRef = useRef(false);
@@ -218,6 +219,7 @@ export default function CreateListingPage() {
               status?: string;
             };
             insiderAnswers?: { question: string; answer: string; honestDisclosure?: boolean }[];
+            photos?: { id: string; url: string; category: string; sortOrder: number }[];
           };
         };
 
@@ -262,6 +264,19 @@ export default function CreateListingPage() {
         if (insiderAnswers && insiderAnswers.length > 0) {
           setSuggestions(insiderAnswers.map((a) => ({ question: a.question, answer: a.answer, honestDisclosure: a.honestDisclosure ?? false, required: false })));
         }
+
+        // Restore photos
+        const photos = data.item?.photos;
+        if (photos && photos.length > 0) {
+          const typed = photos.map((p) => ({
+            id: p.id,
+            url: p.url,
+            category: p.category as import("@/components/PhotoUploader").UploadedPhoto["category"],
+            sortOrder: p.sortOrder,
+          }));
+          setInitialPhotos(typed);
+          setPhotoCount(typed.length);
+        }
       } catch {
         showToast("Error loading draft", "error");
       } finally {
@@ -295,9 +310,6 @@ export default function CreateListingPage() {
     if (form.listingKind === "tenant") {
       if (!form.ownerName.trim()) e.ownerName = "Required for tenant listings";
       if (!form.ownerPhone.trim()) e.ownerPhone = "Required for tenant listings";
-    }
-    if (form.listingKind === "agent" && !form.reraNo.trim()) {
-      e.reraNo = "Required for agent listings";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -548,7 +560,7 @@ export default function CreateListingPage() {
               <SectionTitle>Agent details</SectionTitle>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>RERA number *</Label>
+                  <Label>RERA number <span className="text-[#B0B0B0] font-normal">(optional)</span></Label>
                   <input
                     className={`input ${errors.reraNo ? "error" : ""}`}
                     placeholder="e.g. PRM/KA/RERA/…" value={form.reraNo}
@@ -675,6 +687,7 @@ export default function CreateListingPage() {
             {listingId ? (
               <PhotoUploader
                 propertyId={listingId}
+                initialPhotos={initialPhotos}
                 onCountChange={setPhotoCount}
               />
             ) : (
